@@ -11,7 +11,6 @@ from jsonschema.exceptions import ValidationError
 import cfnlint.runner
 from cfnlint.template import Template
 from cfnlint.rules import RulesCollection
-import cfnlint.custom_rules
 import cfnlint.config
 import cfnlint.formatters
 import cfnlint.decode
@@ -88,7 +87,7 @@ def get_formatter(fmt):
 
 
 def get_rules(append_rules, ignore_rules, include_rules, configure_rules=None, include_experimental=False,
-              mandatory_rules=None):
+              mandatory_rules=None, custom_rules=None):
     """Get rules"""
     rules = RulesCollection(ignore_rules, include_rules, configure_rules,
                             include_experimental, mandatory_rules)
@@ -99,6 +98,8 @@ def get_rules(append_rules, ignore_rules, include_rules, configure_rules=None, i
                 rules.create_from_directory(rules_path)
             else:
                 rules.create_from_module(rules_path)
+
+        rules.create_from_custom_rules_file(custom_rules)
     except (OSError, ImportError) as e:
         raise UnexpectedRuleException('Tried to append rules but got an error: %s' % str(e), 1)
     return rules
@@ -120,8 +121,6 @@ def get_args_filenames(cli_args):
 
     fmt = config.format
     formatter = get_formatter(fmt)
-    if config.custom_rules:
-        cfnlint.custom_rules.set_filename(config.custom_rules)
 
     if config.update_specs:
         cfnlint.maintenance.update_resource_specs()
@@ -176,6 +175,7 @@ def get_template_rules(filename, args):
         args.configure_rules,
         args.include_experimental,
         args.mandatory_checks,
+        args.custom_rules,
     )
 
     return(template, rules, [])
@@ -197,7 +197,7 @@ def run_checks(filename, template, rules, regions, mandatory_rules=None):
     if not matches:
         try:
             matches.extend(runner.run())
-            matches.extend(cfnlint.custom_rules.check(runner.cfn, rules, runner))
+            # matches.extend(cfnlint.custom_rules.check(runner.cfn, rules, runner))
         except Exception as err:  # pylint: disable=W0703
             print(err)
             msg = 'Tried to process rules on file %s but got an error: %s' % (filename, str(err))
