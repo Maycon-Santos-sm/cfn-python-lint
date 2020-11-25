@@ -2,4 +2,4 @@
     name: AWS CloudFormation Linter
     entry: cfn-lint
     language: python
-    files: \.(json|yaml|yml)$
+    pass_filenames: false
